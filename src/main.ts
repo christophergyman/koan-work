@@ -48,6 +48,7 @@ class GameScene extends Phaser.Scene {
   private deathPopupTimer = 0;
   private combatText!: Phaser.GameObjects.Text;
   private deathText!: Phaser.GameObjects.Text;
+  private showDebug = true;
   private readonly ENEMY_RESPAWN_TICKS = 600; // ~10 seconds at 60fps
 
   constructor() {
@@ -135,6 +136,7 @@ class GameScene extends Phaser.Scene {
     while (this.accumulatorMs >= FIXED_STEP_MS && steps < MAX_FIXED_STEPS) {
       const input = this.controls.read();
       updatePlayer(this.player, this.level, input, FIXED_STEP_MS / 1000);
+      if (input.toggleDebugPressed) this.showDebug = !this.showDebug;
       this.handleEnemyInteraction(input);
       if (!this.combatState) {
         this.handleNpcInteraction(input);
@@ -296,13 +298,18 @@ class GameScene extends Phaser.Scene {
       this.deathText.setVisible(false);
     }
 
-    this.hud.setText([
-      `pos ${this.player.x.toFixed(1)}, ${this.player.y.toFixed(1)}`,
-      `vel ${this.player.vx.toFixed(1)}, ${this.player.vy.toFixed(1)}`,
-      `grounded ${this.player.grounded}`,
-      `room ${roomX}, ${roomY}`,
-      `hp ${this.playerStats.hp}/${this.playerStats.maxHp}`,
-    ]);
+    if (this.showDebug) {
+      this.hud.setText([
+        `pos ${this.player.x.toFixed(1)}, ${this.player.y.toFixed(1)}`,
+        `vel ${this.player.vx.toFixed(1)}, ${this.player.vy.toFixed(1)}`,
+        `grounded ${this.player.grounded}`,
+        `room ${roomX}, ${roomY}`,
+        `hp ${this.playerStats.hp}/${this.playerStats.maxHp}`,
+      ]);
+      this.hud.setVisible(true);
+    } else {
+      this.hud.setVisible(false);
+    }
   }
 
   private handleNpcInteraction(input: InputState): void {

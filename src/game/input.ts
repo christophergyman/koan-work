@@ -8,11 +8,13 @@ export type InputState = {
   readonly jumpReleased: boolean;
   readonly interactDown: boolean;
   readonly interactPressed: boolean;
+  readonly toggleDebugPressed: boolean;
 };
 
 export class KeyboardInput {
   private previousJumpDown = false;
   private previousInteractDown = false;
+  private previousToggleDebugDown = false;
 
   constructor(private readonly keyboard: Phaser.Input.Keyboard.KeyboardPlugin) {}
 
@@ -24,6 +26,7 @@ export class KeyboardInput {
       this.keyboard.addKey('W').isDown ||
       this.keyboard.addKey('UP').isDown;
     const interactDown = this.keyboard.addKey('E').isDown;
+    const toggleDebugDown = this.keyboard.addKey('BACKTICK').isDown;
 
     const state: InputState = {
       left,
@@ -33,10 +36,12 @@ export class KeyboardInput {
       jumpReleased: !jumpDown && this.previousJumpDown,
       interactDown,
       interactPressed: interactDown && !this.previousInteractDown,
+      toggleDebugPressed: toggleDebugDown && !this.previousToggleDebugDown,
     };
 
     this.previousJumpDown = jumpDown;
     this.previousInteractDown = interactDown;
+    this.previousToggleDebugDown = toggleDebugDown;
     return state;
   }
 }

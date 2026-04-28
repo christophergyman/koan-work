@@ -12,6 +12,7 @@ const noInput: InputState = {
   jumpReleased: false,
   interactDown: false,
   interactPressed: false,
+  toggleDebugPressed: false,
 };
 
 function input(overrides: Partial<InputState>): InputState {
