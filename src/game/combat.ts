@@ -92,6 +92,66 @@ export function calcDamage(attacker: CombatStats, defender: CombatStats): number
   return Math.max(1, raw);
 }
 
+export type CombatResult =
+  | { type: 'ongoing'; newPlayerX: number; newPlayerY: number }
+  | { type: 'enemyDefeated'; playerStats: CombatStats }
+  | { type: 'playerDefeated' };
+
+export function updateCombatSession(
+  state: CombatState,
+  dt: number,
+  playerX: number,
+  playerY: number,
+  playerWidth: number,
+  playerHeight: number,
+  enemyX: number,
+  enemyY: number,
+  enemyWidth: number,
+  enemyHeight: number,
+  tetherRadius: number,
+): CombatResult {
+  tickCombat(state, dt);
+
+  // Tether
+  const ecx = enemyX + enemyWidth / 2;
+  const ecy = enemyY + enemyHeight / 2;
+  const pcx = playerX + playerWidth / 2;
+  const pcy = playerY + playerHeight / 2;
+  const dx = pcx - ecx;
+  const dy = pcy - ecy;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+
+  let newPlayerX = playerX;
+  let newPlayerY = playerY;
+
+  if (dist > tetherRadius) {
+    const ratio = tetherRadius / dist;
+    newPlayerX = ecx + dx * ratio - playerWidth / 2;
+    newPlayerY = ecy + dy * ratio - playerHeight / 2;
+  }
+
+  if (state.enemyDefeated) {
+    return { type: 'enemyDefeated', playerStats: state.playerStats };
+  }
+
+  if (state.playerDefeated) {
+    return { type: 'playerDefeated' };
+  }
+
+  return { type: 'ongoing', newPlayerX, newPlayerY };
+}
+
+export function tickDefeatedEnemies(defeated: Map<string, number>): void {
+  for (const [id, remaining] of defeated) {
+    const next = remaining - 1;
+    if (next <= 0) {
+      defeated.delete(id);
+    } else {
+      defeated.set(id, next);
+    }
+  }
+}
+
 function cloneStats(stats: CombatStats): CombatStats {
   return { ...stats };
 }
