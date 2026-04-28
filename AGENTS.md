@@ -45,60 +45,42 @@ Core constants live in `src/game/constants.ts`:
 - Player size: `12 × 16`
 - Fixed physics timestep: `60Hz`
 
-Current level format:
+Level format:
 
 ```text
 . empty
 # solid
 @ spawn
-^ future hazard marker
-G future goal marker
+N friendly NPC (dialogue)
+E enemy (combat)
+^ hazard marker (no behavior yet)
+G goal marker (no behavior yet)
 ```
-
-Only `#` and `@` have gameplay behavior right now. `^` and `G` may render/debug as markers, but do not add behavior unless the task asks for it.
 
 ## Architecture
 
 ```text
-src/main.ts
-  Phaser scene shell, fixed timestep loop, debug rendering, HUD
-
-src/game/constants.ts
-  Tuning constants and dimensions
-
-src/game/input.ts
-  Keyboard input snapshot
-
-src/game/level.ts
-  ASCII level data, parsing, tile lookup, room lookup
-
-src/game/player.ts
-  Player state factory/types
-
-src/game/physics.ts
-  Custom platformer movement and AABB tile collision
-
+src/main.ts              entry point — Phaser bootstrap only
+src/scenes/GameScene.ts  scene shell — input, systems, render calls
+src/render/              Phaser drawing code (no game logic)
+  WorldRenderer.ts
+game/                    pure TypeScript — no Phaser, fully testable
+  constants.ts
+  input.ts
+  level.ts
+  player.ts
+  physics.ts
+  entities.ts            Npc / Enemy types + factories
+  proximity.ts           distance utilities
+  dialogue.ts            state machine + content registry
+  combat.ts              tick combat + session logic
 test/
-  Vitest coverage for level parsing and physics behavior
+  level.test.ts
+  physics.test.ts
+  combat.test.ts
 ```
 
-Phaser should mostly handle:
-
-- Canvas/WebGL setup
-- Game loop shell
-- Keyboard input access
-- Debug drawing
-- Text HUD
-
-Plain TypeScript game modules should handle:
-
-- Level parsing
-- Player state
-- Movement tuning
-- Collision
-- Physics tests
-
-Keep game logic as pure/plain TypeScript where reasonable. This makes tests cheap and agent edits safer.
+`src/game/` is Phaser-free. All rendering lives in `src/render/` and `src/scenes/`. Keep it that way.
 
 ## Contribution Rules
 
@@ -150,28 +132,21 @@ Visuals are intentionally rectangles/markers. Do not add sprites, asset loading,
 
 ## Verification Checklist
 
-Before saying work is done, run:
-
 ```bash
 pnpm test
 pnpm build
 ```
 
-For gameplay/UI changes, also run:
+For gameplay/UI changes, also run `pnpm dev` and smoke test:
 
-```bash
-pnpm dev
-```
-
-Then smoke test in a browser:
-
-- canvas mounts
-- player appears
-- keyboard movement works
-- jumping works
-- collision with solid tiles works
-- room snapping still works
-- HUD still updates
+- canvas mounts, player appears
+- movement, jumping, collision work
+- room snapping works
+- `E` talks to friendly NPC, dialogue advances and closes
+- `E` fights enemy, combat panel shows, HP bars update
+- death teleports to spawn with popup
+- `~` toggles debug HUD
+- defeated enemies respawn after ~10 seconds
 
 ## Temp Files
 

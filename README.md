@@ -1,16 +1,14 @@
 # koan-work
 
-Peaceful co-working game prototype.
-
-Right now this is a tiny browser-first 2D platformer sandbox focused on fast iteration, simple movement feel, room snapping, and custom tile collision.
+Tiny browser-first 2D platformer sandbox with dialogue and tick-based auto-combat.
 
 ## Stack
 
-- **Phaser 4** for browser game shell/rendering/input
-- **TypeScript** for game logic
-- **Vite** for fast local dev
-- **Vitest** for unit tests
-- **pnpm** for package management
+- **Phaser 4** — browser game shell, rendering, input
+- **TypeScript** — game logic
+- **Vite** — dev server and build
+- **Vitest** — unit tests
+- **pnpm** — package management
 
 ## Getting Started
 
@@ -19,80 +17,78 @@ pnpm install
 pnpm dev
 ```
 
-Open the local URL Vite prints.
-
 ## Scripts
 
 ```bash
-pnpm dev        # start local dev server
-pnpm test       # run Vitest tests
-pnpm test:watch # run tests in watch mode
-pnpm build      # typecheck and build production assets
+pnpm dev     # start local dev server
+pnpm test    # run Vitest tests
+pnpm build   # typecheck and production build
 ```
 
-## Current Prototype
+## Current Features
 
-- Browser-only local dev target
-- Fixed internal resolution: `480 × 288`
-- Tile size: `16px`
-- Room size: `30 × 18` tiles
-- One big ASCII level split into room chunks
-- Instant room-snap camera
-- Keyboard input only
-- Debug primitive rendering
-- Custom AABB arcade physics
-- Fixed timestep simulation at 60Hz
+- Fixed resolution `480 × 288`, pixel-art scaling
+- Custom AABB physics on a `60Hz` fixed timestep
+- Room-based camera snapping
+- Multi-page dialogue with friendly NPCs (`N` tile)
+- Tick-based auto-combat with enemy NPCs (`E` tile)
+- Debug HUD togglable with `~`
+- ASCII level data, no external editor
 
-Controls:
+## Controls
 
 ```text
-A / Left Arrow   move left
-D / Right Arrow  move right
+A / Left         move left
+D / Right        move right
 W / Up / Space   jump
+E                interact (talk / fight)
+~                toggle debug HUD
 ```
 
 ## Level Format
-
-Levels are currently plain TypeScript/ASCII data in `src/game/level.ts`.
 
 ```text
 . empty
 # solid
 @ spawn
-^ future hazard marker
-G future goal marker
+N friendly NPC (dialogue)
+E enemy (combat)
+^ hazard marker (no behavior yet)
+G goal marker (no behavior yet)
 ```
-
-Only `#` and `@` have gameplay behavior right now.
 
 ## Project Structure
 
 ```text
-src/main.ts              Phaser scene, fixed timestep loop, debug renderer
-src/style.css            Page/canvas styling
-src/game/constants.ts    Dimensions and tuning constants
-src/game/input.ts        Keyboard input snapshot
-src/game/level.ts        ASCII level data and parsing
-src/game/player.ts       Player state/types
-src/game/physics.ts      Custom movement and tile collision
-
-test/level.test.ts       Level parsing tests
-test/physics.test.ts     Physics behavior tests
+src/main.ts              entry point — Phaser bootstrap only
+src/scenes/GameScene.ts  scene shell — input, systems, render calls
+src/render/              Phaser drawing code
+  WorldRenderer.ts       tiles, player, NPCs, enemies, HP bars, panels
+game/                    pure TypeScript — no Phaser, fully testable
+  constants.ts           dimensions and tuning
+  input.ts               keyboard state
+  level.ts               ASCII level parsing
+  player.ts              player state factory
+  physics.ts             movement and tile collision
+  entities.ts            NPC / Enemy types and factories
+  proximity.ts           distance utilities
+  dialogue.ts            dialogue state machine + content registry
+  combat.ts              tick-based combat + session logic
+test/
+  level.test.ts
+  physics.test.ts
+  combat.test.ts
 ```
 
-## Development Notes
+## Dev Notes
 
-This prototype intentionally keeps things small:
+- No Phaser Arcade Physics — custom AABB only
+- No sprites / art pipeline — debug rectangles only
+- No external level editor
+- No ECS or generic engine code
+- `src/game/` is Phaser-free for easy testing
 
-- No Phaser Arcade Physics
-- No sprites/art pipeline yet
-- No external level editor yet
-- No multiplayer yet
-- No ECS or engine abstraction
-
-Game logic should stay mostly in plain TypeScript modules so it is easy to test and easy for agents to edit.
-
-Before finishing changes, run:
+Before finishing changes:
 
 ```bash
 pnpm test
