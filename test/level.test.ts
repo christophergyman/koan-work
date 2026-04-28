@@ -36,4 +36,17 @@ describe('level parsing', () => {
 
     expect(level.npcs).toEqual([{ x: 4 * TILE_SIZE + 2, y: 1 * TILE_SIZE }]);
   });
+
+  it('parses enemy positions', () => {
+    const rows = [
+      '........',
+      '.@..E...',
+      '........',
+      '........',
+      '########',
+    ];
+    const level = parseLevel(rows);
+
+    expect(level.enemies).toEqual([{ x: 4 * TILE_SIZE + 2, y: 1 * TILE_SIZE }]);
+  });
 });

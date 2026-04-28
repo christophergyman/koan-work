@@ -1,6 +1,6 @@
 import { ROOM_COLS, ROOM_ROWS, TILE_SIZE, VIEW_HEIGHT, VIEW_WIDTH } from './constants';
 
-export type Tile = '.' | '#' | '@' | '^' | 'G' | 'N';
+export type Tile = '.' | '#' | '@' | '^' | 'G' | 'N' | 'E';
 
 export type Level = {
   readonly rows: readonly string[];
@@ -8,6 +8,7 @@ export type Level = {
   readonly height: number;
   readonly spawn: { readonly x: number; readonly y: number };
   readonly npcs: readonly { readonly x: number; readonly y: number }[];
+  readonly enemies: readonly { readonly x: number; readonly y: number }[];
 };
 
 const room1 = [
@@ -45,7 +46,7 @@ const room2 = [
   '............####..............',
   '..............................',
   '......####....................',
-  '..............................',
+  '................E.............',
   '..............................',
   '..............................',
   '..............................',
@@ -81,6 +82,7 @@ export function parseLevel(rows: readonly string[]): Level {
   const width = rows[0]?.length ?? 0;
   let spawn: { x: number; y: number } | undefined;
   const npcs: { x: number; y: number }[] = [];
+  const enemies: { x: number; y: number }[] = [];
 
   for (let y = 0; y < rows.length; y += 1) {
     const row = rows[y];
@@ -91,12 +93,13 @@ export function parseLevel(rows: readonly string[]): Level {
       if (!isKnownTile(tile)) throw new Error(`Unknown tile '${tile}' at ${x},${y}.`);
       if (tile === '@') spawn = { x: x * TILE_SIZE + 2, y: y * TILE_SIZE };
       if (tile === 'N') npcs.push({ x: x * TILE_SIZE + 2, y: y * TILE_SIZE });
+      if (tile === 'E') enemies.push({ x: x * TILE_SIZE + 2, y: y * TILE_SIZE });
     }
   }
 
   if (!spawn) throw new Error('Level must include a spawn tile (@).');
 
-  return { rows, width, height: rows.length, spawn, npcs };
+  return { rows, width, height: rows.length, spawn, npcs, enemies };
 }
 
 export function getTile(level: Level, tx: number, ty: number): Tile | undefined {
@@ -122,5 +125,5 @@ export function assertLevelMatchesRoomGrid(level: Level): void {
 }
 
 function isKnownTile(tile: string): tile is Tile {
-  return tile === '.' || tile === '#' || tile === '@' || tile === '^' || tile === 'G' || tile === 'N';
+  return tile === '.' || tile === '#' || tile === '@' || tile === '^' || tile === 'G' || tile === 'N' || tile === 'E';
 }
