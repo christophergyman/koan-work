@@ -6,10 +6,13 @@ export type InputState = {
   readonly jumpDown: boolean;
   readonly jumpPressed: boolean;
   readonly jumpReleased: boolean;
+  readonly interactDown: boolean;
+  readonly interactPressed: boolean;
 };
 
 export class KeyboardInput {
   private previousJumpDown = false;
+  private previousInteractDown = false;
 
   constructor(private readonly keyboard: Phaser.Input.Keyboard.KeyboardPlugin) {}
 
@@ -20,6 +23,7 @@ export class KeyboardInput {
       this.keyboard.addKey('SPACE').isDown ||
       this.keyboard.addKey('W').isDown ||
       this.keyboard.addKey('UP').isDown;
+    const interactDown = this.keyboard.addKey('E').isDown;
 
     const state: InputState = {
       left,
@@ -27,9 +31,12 @@ export class KeyboardInput {
       jumpDown,
       jumpPressed: jumpDown && !this.previousJumpDown,
       jumpReleased: !jumpDown && this.previousJumpDown,
+      interactDown,
+      interactPressed: interactDown && !this.previousInteractDown,
     };
 
     this.previousJumpDown = jumpDown;
+    this.previousInteractDown = interactDown;
     return state;
   }
 }

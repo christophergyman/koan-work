@@ -3,13 +3,16 @@ import './style.css';
 import {
   FIXED_STEP_MS,
   MAX_FIXED_STEPS,
+  PLAYER_HEIGHT,
+  PLAYER_WIDTH,
   ROOM_COLS,
   ROOM_ROWS,
   TILE_SIZE,
   VIEW_HEIGHT,
   VIEW_WIDTH,
 } from './game/constants';
-import { KeyboardInput } from './game/input';
+import { NPC_DIALOGUES } from './game/dialogue';
+import { KeyboardInput, type InputState } from './game/input';
 import { assertLevelMatchesRoomGrid, getRoomForPosition, getTile, level01Rows, parseLevel } from './game/level';
 import { updatePlayer } from './game/physics';
 import { createPlayer, type Player } from './game/player';
@@ -21,6 +24,12 @@ class GameScene extends Phaser.Scene {
   private readonly level = parseLevel(level01Rows);
   private readonly player: Player = createPlayer(this.level);
   private accumulatorMs = 0;
+  private npcs: { x: number; y: number; id: string; width: number; height: number }[] = [];
+  private activeNpcId: string | null = null;
+  private dialoguePageIndex = 0;
+  private nearbyNpcId: string | null = null;
+  private dialogueText!: Phaser.GameObjects.Text;
+  private hintText!: Phaser.GameObjects.Text;
 
   constructor() {
     super('game');
@@ -38,6 +47,35 @@ class GameScene extends Phaser.Scene {
     });
     if (!this.input.keyboard) throw new Error('Keyboard input is unavailable.');
     this.controls = new KeyboardInput(this.input.keyboard);
+
+    for (const npcPos of this.level.npcs) {
+      this.npcs.push({
+        x: npcPos.x,
+        y: npcPos.y,
+        id: 'villageIdiot',
+        width: PLAYER_WIDTH,
+        height: PLAYER_HEIGHT,
+      });
+    }
+
+    this.dialogueText = this.add.text(16, VIEW_HEIGHT - 56, '', {
+      fontFamily: 'monospace',
+      fontSize: '12px',
+      color: '#e6edf3',
+      wordWrap: { width: VIEW_WIDTH - 32 },
+    });
+    this.dialogueText.setVisible(false);
+    this.dialogueText.setDepth(10);
+
+    this.hintText = this.add.text(0, 0, '[E] Talk', {
+      fontFamily: 'monospace',
+      fontSize: '10px',
+      color: '#ffffff',
+      backgroundColor: '#000000aa',
+      padding: { x: 3, y: 2 },
+    });
+    this.hintText.setVisible(false);
+    this.hintText.setDepth(10);
   }
 
   update(_time: number, deltaMs: number): void {
@@ -45,7 +83,9 @@ class GameScene extends Phaser.Scene {
 
     let steps = 0;
     while (this.accumulatorMs >= FIXED_STEP_MS && steps < MAX_FIXED_STEPS) {
-      updatePlayer(this.player, this.level, this.controls.read(), FIXED_STEP_MS / 1000);
+      const input = this.controls.read();
+      updatePlayer(this.player, this.level, input, FIXED_STEP_MS / 1000);
+      this.handleNpcInteraction(input);
       this.accumulatorMs -= FIXED_STEP_MS;
       steps += 1;
     }
@@ -98,12 +138,109 @@ class GameScene extends Phaser.Scene {
       this.player.height,
     );
 
+    for (const npc of this.npcs) {
+      this.graphics.fillStyle(0xff66ff, 1);
+      this.graphics.fillRect(
+        Math.round(npc.x - cameraX),
+        Math.round(npc.y - cameraY),
+        npc.width,
+        npc.height,
+      );
+    }
+
+    if (this.nearbyNpcId && !this.activeNpcId) {
+      const npc = this.npcs.find(n => n.id === this.nearbyNpcId);
+      if (npc) {
+        this.hintText.setPosition(
+          Math.round(npc.x - cameraX + npc.width / 2 - this.hintText.width / 2),
+          Math.round(npc.y - cameraY - 16),
+        );
+        this.hintText.setVisible(true);
+      }
+    } else {
+      this.hintText.setVisible(false);
+    }
+
+    if (this.activeNpcId) {
+      const dialogue = NPC_DIALOGUES[this.activeNpcId];
+      if (dialogue && this.dialoguePageIndex < dialogue.pages.length) {
+        const page = dialogue.pages[this.dialoguePageIndex];
+
+        this.graphics.fillStyle(0x1a1a2e, 0.95);
+        this.graphics.fillRect(8, VIEW_HEIGHT - 64, VIEW_WIDTH - 16, 56);
+        this.graphics.lineStyle(2, 0x8b95ff, 1);
+        this.graphics.strokeRect(8, VIEW_HEIGHT - 64, VIEW_WIDTH - 16, 56);
+
+        this.dialogueText.setText(page);
+        this.dialogueText.setVisible(true);
+      }
+    } else {
+      this.dialogueText.setVisible(false);
+    }
+
     this.hud.setText([
       `pos ${this.player.x.toFixed(1)}, ${this.player.y.toFixed(1)}`,
       `vel ${this.player.vx.toFixed(1)}, ${this.player.vy.toFixed(1)}`,
       `grounded ${this.player.grounded}`,
       `room ${roomX}, ${roomY}`,
     ]);
+  }
+
+  private handleNpcInteraction(input: InputState): void {
+    const proximity = TILE_SIZE * 1.5;
+    let nearbyNpc: typeof this.npcs[0] | null = null;
+
+    for (const npc of this.npcs) {
+      const dx = (this.player.x + this.player.width / 2) - (npc.x + npc.width / 2);
+      const dy = (this.player.y + this.player.height / 2) - (npc.y + npc.height / 2);
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist <= proximity) {
+        nearbyNpc = npc;
+        break;
+      }
+    }
+
+    this.nearbyNpcId = nearbyNpc ? nearbyNpc.id : null;
+
+    if (this.activeNpcId) {
+      const activeNpc = this.npcs.find(n => n.id === this.activeNpcId);
+      if (!activeNpc) {
+        this.closeDialogue();
+        return;
+      }
+
+      const dx = (this.player.x + this.player.width / 2) - (activeNpc.x + activeNpc.width / 2);
+      const dy = (this.player.y + this.player.height / 2) - (activeNpc.y + activeNpc.height / 2);
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > proximity) {
+        this.closeDialogue();
+        return;
+      }
+
+      if (input.interactPressed) {
+        const dialogue = NPC_DIALOGUES[this.activeNpcId];
+        if (!dialogue) {
+          this.closeDialogue();
+          return;
+        }
+
+        this.dialoguePageIndex += 1;
+        if (this.dialoguePageIndex >= dialogue.pages.length) {
+          this.closeDialogue();
+        }
+      }
+      return;
+    }
+
+    if (nearbyNpc && input.interactPressed) {
+      this.activeNpcId = nearbyNpc.id;
+      this.dialoguePageIndex = 0;
+    }
+  }
+
+  private closeDialogue(): void {
+    this.activeNpcId = null;
+    this.dialoguePageIndex = 0;
   }
 }
 

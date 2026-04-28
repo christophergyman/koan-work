@@ -23,4 +23,17 @@ describe('level parsing', () => {
   it('rejects inconsistent row widths', () => {
     expect(() => parseLevel(['@..', '....'])).toThrow(/inconsistent width/);
   });
+
+  it('parses NPC positions', () => {
+    const rows = [
+      '........',
+      '.@..N...',
+      '........',
+      '........',
+      '########',
+    ];
+    const level = parseLevel(rows);
+
+    expect(level.npcs).toEqual([{ x: 4 * TILE_SIZE + 2, y: 1 * TILE_SIZE }]);
+  });
 });
