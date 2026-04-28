@@ -173,6 +173,10 @@ Then smoke test in a browser:
 - room snapping still works
 - HUD still updates
 
+## Temp Files
+
+If you generate temporary files during work — plans, screenshots, scratch notes, dumps, etc. — put them in `/temp` at the repo root. Do not leave them scattered in the working directory. The folder is gitignored.
+
 ## Style
 
 - Strict TypeScript.
